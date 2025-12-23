@@ -56,6 +56,7 @@ const CreateRequest = () => {
         budget: formData.budget,
         max_participants: parseInt(formData.max_participants),
         description: formData.description || null,
+        status: 'open', // ensure new requests are surfaced on the browse page
       });
 
       if (error) throw error;

@@ -64,7 +64,6 @@ const Index = () => {
         .from('dining_requests')
         .select('*')
         .eq('status', 'open')
-        .gte('date_time', new Date().toISOString())
         .order('date_time', { ascending: true });
 
       if (requestsError) throw requestsError;
@@ -188,6 +187,9 @@ const Index = () => {
     return matchesSearch && matchesDiet && matchesBudget;
   });
 
+  const myRequests = filteredRequests.filter(r => r.creator_id === user.id);
+  const otherRequests = filteredRequests.filter(r => r.creator_id !== user.id);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center gradient-warm">
@@ -255,40 +257,67 @@ const Index = () => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        ) : filteredRequests.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredRequests.map((request) => (
-              <DiningRequestCard
-                key={request.id}
-                request={{
-                  ...request,
-                  participant_count: getParticipantCount(request.id),
-                }}
-                currentUserId={user.id}
-                onJoin={handleJoin}
-                onLeave={handleLeave}
-                isJoined={joinedRequests.has(request.id)}
-                isLoading={actionLoading === request.id}
-              />
-            ))}
-          </div>
         ) : (
-          <div className="text-center py-16 space-y-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary">
-              <Utensils className="w-8 h-8 text-muted-foreground" />
+          <>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">My requests</h2>
+                <Button variant="gradient" onClick={() => navigate('/create')} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  New Request
+                </Button>
+              </div>
+
+              {myRequests.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {myRequests.map((request) => (
+                    <DiningRequestCard
+                      key={request.id}
+                      request={{
+                        ...request,
+                        participant_count: getParticipantCount(request.id),
+                      }}
+                      currentUserId={user.id}
+                      onJoin={handleJoin}
+                      onLeave={handleLeave}
+                      isJoined={joinedRequests.has(request.id)}
+                      isLoading={actionLoading === request.id}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 rounded-xl border border-dashed text-muted-foreground">
+                  You haven’t created any upcoming requests yet.
+                </div>
+              )}
             </div>
-            <div>
-              <h3 className="font-semibold text-lg">No requests found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || dietFilter !== 'all' || budgetFilter !== 'all'
-                  ? 'Try adjusting your filters'
-                  : 'Be the first to create a dining request!'}
-              </p>
+
+            <div className="space-y-3">
+              <h2 className="text-xl font-semibold">Other requests</h2>
+              {otherRequests.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {otherRequests.map((request) => (
+                    <DiningRequestCard
+                      key={request.id}
+                      request={{
+                        ...request,
+                        participant_count: getParticipantCount(request.id),
+                      }}
+                      currentUserId={user.id}
+                      onJoin={handleJoin}
+                      onLeave={handleLeave}
+                      isJoined={joinedRequests.has(request.id)}
+                      isLoading={actionLoading === request.id}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 rounded-xl border border-dashed text-muted-foreground">
+                  No open requests from others right now.
+                </div>
+              )}
             </div>
-            <Button variant="gradient" onClick={() => navigate('/create')}>
-              Create Request
-            </Button>
-          </div>
+          </>
         )}
       </div>
     </Layout>
