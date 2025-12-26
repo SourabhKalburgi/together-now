@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Clock, Utensils, Loader2 } from 'lucide-react';
+import { getErrorMessage, getErrorTitle } from '@/lib/utils/error-handler';
 
 interface DiningRequest {
   id: string;
@@ -108,8 +109,8 @@ const History = () => {
       setMyRequests(myRequestsWithProfile);
     } catch (error: any) {
       toast({
-        title: "Error loading history",
-        description: error.message,
+        title: getErrorTitle('LOADING_HISTORY'),
+        description: getErrorMessage(error, 'LOADING_HISTORY'),
         variant: "destructive",
       });
     } finally {
