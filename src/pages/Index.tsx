@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/Layout';
 import DiningRequestCard from '@/components/DiningRequestCard';
+import OfflineBanner from '@/components/OfflineBanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Search, Filter, Plus, Utensils, Loader2 } from 'lucide-react';
+import { MESSAGES } from '@/lib/constants/messages';
+import { getErrorMessage, getErrorTitle } from '@/lib/utils/error-handler';
+import { checkOfflineAndNotify } from '@/lib/utils/offline-handler';
 
 interface DiningRequest {
   id: string;
@@ -34,6 +39,7 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isOnline } = useOnlineStatus();
   
   const [requests, setRequests] = useState<DiningRequest[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -52,12 +58,16 @@ const Index = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) {
+    if (user && isOnline) {
       fetchRequests();
+    } else if (!isOnline) {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, isOnline]);
 
   const fetchRequests = async () => {
+    setLoading(true);
+
     try {
       // Fetch open requests
       const { data: requestsData, error: requestsError } = await supabase
@@ -100,8 +110,8 @@ const Index = () => {
       setJoinedRequests(userJoined);
     } catch (error: any) {
       toast({
-        title: "Error loading requests",
-        description: error.message,
+        title: getErrorTitle('LOADING_REQUESTS'),
+        description: getErrorMessage(error, 'LOADING_REQUESTS'),
         variant: "destructive",
       });
     } finally {
@@ -111,6 +121,12 @@ const Index = () => {
 
   const handleJoin = async (requestId: string) => {
     if (!user) return;
+    if (checkOfflineAndNotify(isOnline, toast, {
+      title: MESSAGES.OFFLINE.TITLE,
+      description: MESSAGES.OFFLINE.JOIN_DESCRIPTION,
+    })) {
+      return;
+    }
     setActionLoading(requestId);
 
     try {
@@ -124,13 +140,13 @@ const Index = () => {
       setParticipants(prev => [...prev, { request_id: requestId, user_id: user.id }]);
       
       toast({
-        title: "Joined!",
-        description: "You've successfully joined this dining request.",
+        title: MESSAGES.SUCCESS.JOINED_REQUEST.TITLE,
+        description: MESSAGES.SUCCESS.JOINED_REQUEST.DESCRIPTION,
       });
     } catch (error: any) {
       toast({
-        title: "Couldn't join",
-        description: error.message,
+        title: getErrorTitle('JOINING_REQUEST'),
+        description: getErrorMessage(error, 'JOINING_REQUEST'),
         variant: "destructive",
       });
     } finally {
@@ -140,6 +156,12 @@ const Index = () => {
 
   const handleLeave = async (requestId: string) => {
     if (!user) return;
+    if (checkOfflineAndNotify(isOnline, toast, {
+      title: MESSAGES.OFFLINE.TITLE,
+      description: MESSAGES.OFFLINE.LEAVE_DESCRIPTION,
+    })) {
+      return;
+    }
     setActionLoading(requestId);
 
     try {
@@ -159,13 +181,13 @@ const Index = () => {
       setParticipants(prev => prev.filter(p => !(p.request_id === requestId && p.user_id === user.id)));
       
       toast({
-        title: "Left request",
-        description: "You've left this dining request.",
+        title: MESSAGES.SUCCESS.LEFT_REQUEST.TITLE,
+        description: MESSAGES.SUCCESS.LEFT_REQUEST.DESCRIPTION,
       });
     } catch (error: any) {
       toast({
-        title: "Couldn't leave",
-        description: error.message,
+        title: getErrorTitle('LEAVING_REQUEST'),
+        description: getErrorMessage(error, 'LEAVING_REQUEST'),
         variant: "destructive",
       });
     } finally {
@@ -214,6 +236,8 @@ const Index = () => {
             New Request
           </Button>
         </div>
+
+        <OfflineBanner isOnline={isOnline} />
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">

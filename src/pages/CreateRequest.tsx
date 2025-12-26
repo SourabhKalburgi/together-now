@@ -11,11 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Utensils, Loader2 } from 'lucide-react';
+import { MESSAGES } from '@/lib/constants/messages';
+import { getErrorMessage, getErrorTitle } from '@/lib/utils/error-handler';
+import { useOnlineStatus } from '@/hooks/use-online-status';
+import { checkOfflineAndNotify } from '@/lib/utils/offline-handler';
 
 const CreateRequest = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isOnline } = useOnlineStatus();
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -43,6 +48,10 @@ const CreateRequest = () => {
     e.preventDefault();
     if (!user) return;
 
+    if (checkOfflineAndNotify(isOnline, toast)) {
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -62,14 +71,14 @@ const CreateRequest = () => {
       if (error) throw error;
 
       toast({
-        title: "Request created!",
-        description: "Your dining request has been posted.",
+        title: MESSAGES.SUCCESS.REQUEST_CREATED.TITLE,
+        description: MESSAGES.SUCCESS.REQUEST_CREATED.DESCRIPTION,
       });
       navigate('/');
     } catch (error: any) {
       toast({
-        title: "Error creating request",
-        description: error.message,
+        title: getErrorTitle('CREATING_REQUEST'),
+        description: getErrorMessage(error, 'CREATING_REQUEST'),
         variant: "destructive",
       });
     } finally {
